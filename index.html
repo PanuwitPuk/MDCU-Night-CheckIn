@@ -7,20 +7,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MDCU Night Check-in</title>
 
-    <!-- SEO Meta Tags -->
     <meta name="google-site-verification" content="LVo329QlgQQisNaJ7dDJGmEch0tas8Ljt8tmablNOfM" />
     <meta name="description" content="ระบบเช็คอินกิจกรรม MDCU Night ซึ่งรองรับการสแกน QR Code และกรอกรหัสสำหรับเช็คชื่อน้อง">
     <meta name="keywords" content="MDCU, Check-in, MDCU Night, ระบบเช็คอิน, เช็คอินกิจกรรม, สแกนคิวอาร์โค้ด, จุฬาลงกรณ์">
     <meta name="author" content="MDCU">
     <meta name="robots" content="index, follow">
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- jsQR Library (Fallback) -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-
-    <!-- Prompt Font -->
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -107,21 +101,39 @@
             margin: 0;
         }
 
-        /* Badge สำหรับแจ้งเตือนสถานะ Sync */
         #syncBadge {
             transition: all 0.3s ease;
+        }
+
+        .animate-spin-ccw {
+            animation: spin-ccw 1s linear infinite;
+        }
+        @keyframes spin-ccw {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); } 
+        }
+        
+        #refreshBtn.is-loading #refreshIcon {
+            animation: spin-ccw 1s linear infinite;
         }
     </style>
 </head>
 
 <body>
+    <div id="initialLoader" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white transition-all duration-500">
+        <svg class="animate-spin-ccw h-12 w-12 text-white mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-xl font-bold">กำลังเตรียมระบบ...</p>
+        <p class="text-sm text-gray-300 mt-2">กรุณารอสักครู่ โหลดข้อมูลครั้งแรกอาจใช้เวลา</p>
+    </div>
+
     <div class="app-container w-full max-w-md mx-auto space-y-4">
-        <!-- Header Section -->
         <header class="w-full flex justify-between items-center py-2 px-2">
             <div>
                 <div class="flex items-center gap-2">
                     <h1 class="text-2xl font-bold tracking-tight text-gray-900">ระบบเช็คชื่อน้อง</h1>
-                    <!-- จุดไฟกระพริบเมื่อกำลัง Sync เบื้องหลัง -->
                     <div id="syncBadge" class="hidden w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse" title="กำลังส่งข้อมูลพื้นหลัง..."></div>
                 </div>
                 <p class="text-sm font-medium text-gray-500">MDCU Night System</p>
@@ -134,10 +146,10 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button onclick="APP.fetchConfigs(true)"
+                <button id="refreshBtn" onclick="APP.fetchConfigs(true)"
                     class="p-2.5 bg-white rounded-full shadow-sm border border-gray-100 text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
                     title="รีเฟรชข้อมูล">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                         <path d="M3 3v5h5" />
@@ -146,12 +158,11 @@
             </div>
         </header>
 
-        <!-- Settings Card -->
         <div class="glass-card w-full p-5 border-1 border-gray-200 shadow-md">
             <div class="flex items-center gap-2 mb-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83 2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
                 <p class="text-xs font-bold text-gray-700 uppercase tracking-wider">การตั้งค่าการเช็คอิน</p>
             </div>
@@ -181,9 +192,7 @@
             </div>
         </div>
 
-        <!-- Main Action Card -->
         <div class="glass-card w-full flex-grow flex flex-col overflow-hidden">
-            <!-- Custom Tabs -->
             <div class="p-2 border-b border-gray-100">
                 <div class="flex bg-gray-50 p-1 rounded-xl">
                     <button id="modeScanBtn" onclick="APP.switchMode('scan')" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-white text-gray-900 shadow-sm transition-all duration-200">สแกน QR</button>
@@ -192,24 +201,16 @@
                 </div>
             </div>
 
-            <!-- 1. Scanner Mode -->
             <div id="scanWrapper" class="p-5 flex flex-col items-center flex-grow justify-center w-full">
                 <div id="reader-container" class="shadow-inner relative">
                     <video id="video-preview" playsinline></video>
-
                     <div id="scan-frame" class="scanner-frame"><span></span></div>
-
                     <div id="camera-controls" class="absolute top-3 right-3 flex flex-col gap-2 z-20 hidden fade-in">
-                        <button onclick="SCANNER.switchCamera()" class="p-2.5 bg-black/40 text-white rounded-full backdrop-blur-md border border-white/20 hover:bg-black/60 active:scale-95 transition-all shadow-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9v-1a2 2 0 0 0-2-2H6.5" /><path d="m9 2-4 4 4 4" /><path d="M4 15v1a2 2 0 0 0 2 2h11.5" /><path d="m15 22 4-4-4-4" /></svg>
-                        </button>
                         <button id="btnFlash" onclick="SCANNER.toggleFlash()" class="p-2.5 bg-black/40 text-white rounded-full backdrop-blur-md border border-white/20 hover:bg-black/60 active:scale-95 transition-all shadow-lg hidden">
                             <svg id="iconFlash" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h2.5v7l9-10.5H13L15 2z" /></svg>
                         </button>
                     </div>
-
                     <canvas id="hidden-canvas" class="hidden"></canvas>
-
                     <div id="camera-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/90 backdrop-blur-sm text-white transition-opacity duration-300 z-10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mb-3 opacity-80"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
                         <p class="text-sm font-medium">รอการเปิดกล้อง</p>
@@ -226,7 +227,6 @@
                 </div>
             </div>
 
-            <!-- 2. Manual Mode -->
             <div id="manualWrapper" class="hidden p-6 flex flex-col items-center flex-grow justify-center w-full">
                 <div class="w-full max-w-[280px] space-y-8">
                     <div class="text-center">
@@ -242,24 +242,26 @@
                 </div>
             </div>
 
-            <!-- 3. Dashboard Mode -->
             <div id="dashWrapper" class="hidden p-5 flex flex-col flex-grow w-full">
                 <div class="flex flex-col gap-3 mb-5">
+                    <div class="relative w-full">
+                        <input type="text" id="dashSearchInput" placeholder="ค้นหาชื่อ, รหัส..." onkeypress="if(event.key === 'Enter') APP.loadDashboard()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all shadow-inner">
+                    </div>
                     <div class="flex gap-2">
                         <div class="relative flex-1">
-                            <select id="dashRoundSelect" class="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
-                                <option value="" disabled selected hidden>กรุณาเลือกรอบ</option>
+                            <select id="dashBaanSelect" class="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
+                                <option value="">ทุกบ้าน</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
                         </div>
                         <div class="relative flex-1">
-                            <select id="dashBaanSelect" class="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
-                                <option value="" disabled selected hidden>กรุณาเลือกบ้าน</option>
+                            <select id="dashDormSelect" class="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all">
+                                <option value="">ทุกห้องนอน</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
                         </div>
                     </div>
-                    <button onclick="APP.loadDashboard()" class="w-full bg-gray-900 text-white px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-all">ค้นหาข้อมูล</button>
+                    <button onclick="APP.loadDashboard()" class="w-full bg-gray-900 text-white px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-md">ค้นหาข้อมูล</button>
                     <div id="dashLastUpdated" class="text-xs font-medium text-gray-400 px-1 flex items-center justify-center gap-1.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -290,7 +292,7 @@
                         <button onclick="APP.toggleDashTab('present')" id="tabPresent" class="flex-1 text-xs font-bold py-2 rounded-lg text-gray-500 hover:text-gray-700 transition-all">เช็คอินแล้ว</button>
                     </div>
                     <div id="listMissing" class="flex-grow overflow-y-auto space-y-2 pb-2 px-1">
-                        <div class="text-center text-sm text-gray-400 py-8">กรุณาเลือกบ้านและกดค้นหา...</div>
+                        <div class="text-center text-sm text-gray-400 py-8">กรุณากดค้นหารายการที่ต้องการ</div>
                     </div>
                     <div id="listPresent" class="hidden flex-grow overflow-y-auto space-y-2 pb-2 px-1"></div>
                 </div>
@@ -302,7 +304,6 @@
                 <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">ช่องทางติดต่อฝ่ายทะเบียน</span>
                 <p class="text-sm font-bold text-gray-900">ภาณุวิชญ์ พุกโฉมงาม (พี)</p>
                 <p class="text-xs font-medium text-gray-600">หัวหน้าฝ่ายทะเบียน MDCU Night</p>
-
                 <div class="w-full pt-2">
                     <div class="flex gap-4 flex-wrap">
                         <a href="tel:0982480203" class="flex items-center gap-1.5 text-xs text-gray-700 hover:text-black transition-colors">
@@ -323,17 +324,8 @@
         </footer>
     </div>
 
-    <!-- Success Toast Notification (Minimalist) เปลี่ยนให้รองรับหลายสี -->
-    <div id="toastNoti" class="fixed top-5 right-5 z-[100] flex items-center gap-3 rounded-2xl px-5 py-3.5 text-white shadow-2xl transition-all duration-300 translate-x-[150%] opacity-0 pointer-events-none">
-        <div class="bg-white/20 rounded-full p-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-            </svg>
-        </div>
-        <span id="toastMsg" class="font-bold text-sm tracking-wide">...</span>
-    </div>
+    <div id="toastContainer" class="fixed top-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none w-max max-w-[80vw]"></div>
 
-    <!-- Confirm / Error Modal System -->
     <div id="resultModal" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 px-4">
         <div id="modalContent" class="bg-white rounded-3xl p-6 w-full max-w-[320px] shadow-2xl transform scale-95 transition-all duration-300 flex flex-col">
             <div class="text-center mb-5">
@@ -356,10 +348,14 @@
                         <span id="modalUserBaan" class="text-sm font-bold text-gray-900 bg-white px-2 py-0.5 rounded-md border border-gray-200"></span>
                     </div>
                     
-                    <!-- ส่วนแสดงรายละเอียดเพิ่มเติมตอนตรวจสอบข้อมูล -->
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-xs font-semibold text-gray-400">เบอร์โทร</span>
+                        <span id="modalUserPhone" class="text-sm font-bold text-blue-600 text-right"></span>
+                    </div>
+                    
                     <div id="modalExtraInfo" class="hidden flex-col divide-y divide-gray-100 border-t border-gray-100 mt-2">
                         <div class="flex justify-between items-center py-2 mt-1">
-                            <span class="text-xs font-semibold text-gray-400">สถานที่</span>
+                            <span class="text-xs font-semibold text-gray-400">สถานะ</span>
                             <span id="modalUserPlace" class="text-sm font-medium text-blue-600 text-right"></span>
                         </div>
                         <div class="flex justify-between items-center py-2">
@@ -385,16 +381,14 @@
     </div>
 
     <script>
-        // ==========================================
-        // URL จาก Google Apps Script
-        // ==========================================
-        const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwRVjyeyGvJbnK0dFGS0V7FgBY3NSZcTAB04oT2rkbsKcCmgjP6tPbrUBu8g1YJtyv2/exec";
+        const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaTGR94AgvVyoVLTQAC2fB5xBKaSsAkNYFEUjz4IUbTn2yBzrMTQn0HZQBTqb98BRz/exec";
 
         const DOM = {
             roundSelect: document.getElementById('roundSelect'),
             placeSelect: document.getElementById('placeSelect'),
+            dashSearchInput: document.getElementById('dashSearchInput'),
             dashBaanSelect: document.getElementById('dashBaanSelect'),
-            dashRoundSelect: document.getElementById('dashRoundSelect'),
+            dashDormSelect: document.getElementById('dashDormSelect'),
             scanWrapper: document.getElementById('scanWrapper'),
             manualWrapper: document.getElementById('manualWrapper'),
             dashWrapper: document.getElementById('dashWrapper'),
@@ -417,6 +411,7 @@
             modalUserId: document.getElementById('modalUserId'),
             modalUserName: document.getElementById('modalUserName'),
             modalUserBaan: document.getElementById('modalUserBaan'),
+            modalUserPhone: document.getElementById('modalUserPhone'), 
             modalExtraInfo: document.getElementById('modalExtraInfo'),
             modalUserRound: document.getElementById('modalUserRound'),
             modalUserPlace: document.getElementById('modalUserPlace'),
@@ -432,10 +427,11 @@
             tabPresent: document.getElementById('tabPresent'),
             listMissing: document.getElementById('listMissing'),
             listPresent: document.getElementById('listPresent'),
-            toastNoti: document.getElementById('toastNoti'),
-            toastMsg: document.getElementById('toastMsg'),
+            toastContainer: document.getElementById('toastContainer'), 
             syncBadge: document.getElementById('syncBadge'),
             configLastUpdatedText: document.getElementById('configLastUpdatedText'),
+            initialLoader: document.getElementById('initialLoader'),
+            refreshBtn: document.getElementById('refreshBtn')
         };
 
         async function fetchAPI(action, data = {}) {
@@ -456,36 +452,21 @@
         const SCANNER = {
             video: document.getElementById('video-preview'),
             canvas: document.getElementById('hidden-canvas'),
-            isScanning: false,
-            stream: null,
-            currentFacingMode: 'environment',
-            isTorchOn: false,
-            videoTrack: null,
+            isScanning: false, stream: null, currentFacingMode: 'environment', isTorchOn: false, videoTrack: null,
 
             start: async function () {
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                     APP.showError("เบราว์เซอร์ไม่รองรับ", "กรุณาใช้ Chrome หรือ Safari เวอร์ชั่นล่าสุด");
                     return;
                 }
-
                 try {
-                    if (this.stream) {
-                        this.stream.getTracks().forEach(track => track.stop());
-                    }
-
+                    if (this.stream) this.stream.getTracks().forEach(track => track.stop());
                     this.stream = await navigator.mediaDevices.getUserMedia({
-                        video: { 
-                            facingMode: this.currentFacingMode, 
-                            width: { ideal: 720 }, 
-                            height: { ideal: 720 },
-                            advanced: [{ focusMode: "continuous" }]
-                        }
+                        video: { facingMode: this.currentFacingMode, width: { ideal: 720 }, height: { ideal: 720 }, advanced: [{ focusMode: "continuous" }] }
                     });
-
                     this.video.srcObject = this.stream;
                     this.video.setAttribute("playsinline", true);
                     this.videoTrack = this.stream.getVideoTracks()[0];
-
                     const settings = this.videoTrack.getSettings();
                     if (settings.facingMode === 'user' || this.currentFacingMode === 'user') {
                         this.video.style.transform = "scaleX(-1)";
@@ -496,27 +477,20 @@
                     this.video.onloadedmetadata = () => {
                         this.video.play();
                         this.isScanning = true;
-
                         DOM.cameraOverlay.style.opacity = '0';
                         setTimeout(() => DOM.cameraOverlay.style.display = 'none', 300);
-
                         DOM.scanFrame.style.display = 'block';
                         DOM.cameraControls.classList.remove('hidden');
 
                         const hasTorch = this.videoTrack.getCapabilities && this.videoTrack.getCapabilities().torch;
-                        if (hasTorch && this.currentFacingMode === 'environment') {
-                            DOM.btnFlash.classList.remove('hidden');
-                        } else {
-                            DOM.btnFlash.classList.add('hidden');
-                        }
+                        if (hasTorch && this.currentFacingMode === 'environment') DOM.btnFlash.classList.remove('hidden');
+                        else DOM.btnFlash.classList.add('hidden');
 
                         DOM.btnStart.classList.add('hidden');
                         DOM.btnStop.classList.remove('hidden');
                         requestAnimationFrame(() => this.tick());
                     };
-                } catch (err) {
-                    APP.showError("ไม่สามารถเข้าถึงกล้องได้", "หากระบบบล็อกกล้อง ให้ตรวจสอบสิทธิ์กล้องในการตั้งค่าเบราว์เซอร์");
-                }
+                } catch (err) { APP.showError("ไม่สามารถเข้าถึงกล้องได้", "หากระบบบล็อกกล้อง ให้ตรวจสอบสิทธิ์กล้องในการตั้งค่าเบราว์เซอร์"); }
             },
 
             switchCamera: function () {
@@ -536,9 +510,7 @@
                         const capabilities = this.videoTrack.getCapabilities();
                         if (capabilities.torch) {
                             this.isTorchOn = !this.isTorchOn;
-                            await this.videoTrack.applyConstraints({
-                                advanced: [{ torch: this.isTorchOn }]
-                            });
+                            await this.videoTrack.applyConstraints({ advanced: [{ torch: this.isTorchOn }] });
                             if (this.isTorchOn) {
                                 DOM.iconFlash.setAttribute('fill', 'currentColor');
                                 DOM.iconFlash.classList.add('text-yellow-400');
@@ -554,15 +526,11 @@
             tick: function () {
                 if (this.video.readyState === this.video.HAVE_ENOUGH_DATA && this.isScanning) {
                     const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
-                    const vW = this.video.videoWidth;
-                    const vH = this.video.videoHeight;
-                    const cropSize = Math.min(vW, vH) * 0.7; 
-                    const startX = (vW - cropSize) / 2;
-                    const startY = (vH - cropSize) / 2;
+                    const cropSize = Math.min(this.video.videoWidth, this.video.videoHeight) * 0.7; 
+                    const startX = (this.video.videoWidth - cropSize) / 2;
+                    const startY = (this.video.videoHeight - cropSize) / 2;
 
-                    this.canvas.width = 300;
-                    this.canvas.height = 300;
-                    
+                    this.canvas.width = 300; this.canvas.height = 300;
                     ctx.drawImage(this.video, startX, startY, cropSize, cropSize, 0, 0, 300, 300);
                     const imageData = ctx.getImageData(0, 0, 300, 300);
                     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
@@ -571,19 +539,16 @@
                         this.pause();
                         if (navigator.vibrate) navigator.vibrate(200); 
                         APP.verifyUser(code.data);
-                        return; // เจอโค้ดแล้ว หยุดทำลูปชั่วคราว
+                        return; 
                     }
                 }
-                
                 if (this.isScanning) requestAnimationFrame(() => this.tick());
             },
 
             stop: function () {
-                this.isScanning = false;
-                this.isTorchOn = false;
+                this.isScanning = false; this.isTorchOn = false;
                 if (this.stream) this.stream.getTracks().forEach(track => track.stop());
-                this.video.srcObject = null;
-                this.videoTrack = null;
+                this.video.srcObject = null; this.videoTrack = null;
 
                 DOM.scanFrame.style.display = 'none';
                 DOM.cameraControls.classList.add('hidden');
@@ -619,26 +584,28 @@
         };
 
         const APP = {
-            currentMode: "scan",
-            isProcessing: false,
-            pendingId: null,
-            lastUserData: null,
-            toastTimeout: null,
-            isSyncing: false,
+            currentMode: "scan", isProcessing: false, pendingId: null, lastUserData: null, isSyncing: false,
             beepSound: new Audio("assets/sounds/beep.wav"),
 
             init: function () {
                 this.fetchConfigs(false);
                 this.beepSound.load();
-                // Safari iOS unlock trick for instant beep
+                
                 document.body.addEventListener('click', () => {
                     this.beepSound.play().then(() => {
                         this.beepSound.pause();
                         this.beepSound.currentTime = 0;
                     }).catch(()=>{});
                 }, { once: true });
-                // พยายามดึงคิวที่ค้างไว้ส่งขึ้น Server ทุกๆ 10 วินาที (เผื่อเน็ตหลุด)
+                
                 setInterval(() => this.processSyncQueue(), 10000);
+            },
+
+            hideLoader: function() {
+                if (DOM.initialLoader && !DOM.initialLoader.classList.contains('opacity-0')) {
+                    DOM.initialLoader.classList.add('opacity-0', 'pointer-events-none');
+                    setTimeout(() => DOM.initialLoader.style.display = 'none', 500);
+                }
             },
 
             switchMode: function (mode) {
@@ -656,92 +623,110 @@
                 DOM.manualWrapper.classList.toggle('hidden', mode !== 'manual');
                 DOM.dashWrapper.classList.toggle('hidden', mode !== 'dashboard');
 
-                if (mode === 'scan') SCANNER.resume();
-                else SCANNER.stop();
-
+                if (mode === 'scan') SCANNER.resume(); else SCANNER.stop();
                 if (mode === 'manual') DOM.manualIdInput.focus();
             },
 
             renderConfigs: function(data) {
-                // จำค่าปัจจุบันที่เลือกไว้ก่อน
-                const currentPlace = DOM.placeSelect.value;
-                const currentRound = DOM.roundSelect.value;
-                const currentDashRound = DOM.dashRoundSelect.value;
-                const currentDashBaan = DOM.dashBaanSelect.value;
+                const currentPlace = DOM.placeSelect.value, currentRound = DOM.roundSelect.value;
+                const currentDashBaan = DOM.dashBaanSelect.value, currentDashDorm = DOM.dashDormSelect.value;
 
                 DOM.placeSelect.innerHTML = data.places.map(p => `<option value="${p}">${p}</option>`).join('');
                 DOM.roundSelect.innerHTML = data.times.map(t => `<option value="${t}">${t}</option>`).join('');
-                DOM.dashRoundSelect.innerHTML = '<option value="" disabled selected hidden>กรุณาเลือกรอบ</option>' + data.times.map(t => `<option value="${t}">${t}</option>`).join('');
-                if (data.baans) {
-                    DOM.dashBaanSelect.innerHTML = '<option value="" disabled selected hidden>กรุณาเลือกบ้าน</option>' + data.baans.map(b => `<option value="${b}">${b}</option>`).join('');
+
+                let baansList = [];
+                let dormsList = [];
+
+                if (data.baans && data.baans.length > 0) {
+                    baansList = data.baans;
+                    dormsList = data.dorms || []; 
+                } else {
+                    let cachedUsers = {};
+                    try { cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}'); } catch(e){}
+                    const uniqueBaans = new Set();
+                    const uniqueDorms = new Set();
+                    Object.values(cachedUsers).forEach(u => {
+                        if(u.baan && u.baan !== "-") uniqueBaans.add(u.baan);
+                        if(u.dorm && u.dorm !== "-") uniqueDorms.add(u.dorm);
+                    });
+                    baansList = Array.from(uniqueBaans).sort();
+                    dormsList = Array.from(uniqueDorms).sort((a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'}));
                 }
 
-                // เซ็ตค่ากลับไปเป็นค่าเดิมที่เคยเลือกไว้ (ถ้ามี)
+                DOM.dashBaanSelect.innerHTML = '<option value="">ทุกบ้าน</option>' + baansList.map(b => `<option value="${b}">${b}</option>`).join('');
+                DOM.dashDormSelect.innerHTML = '<option value="">ทุกห้องนอน</option>' + dormsList.map(d => `<option value="${d}">${d}</option>`).join('');
+
                 if (currentPlace) DOM.placeSelect.value = currentPlace;
                 if (currentRound) DOM.roundSelect.value = currentRound;
-                if (currentDashRound) DOM.dashRoundSelect.value = currentDashRound;
                 if (currentDashBaan) DOM.dashBaanSelect.value = currentDashBaan;
+                if (currentDashDorm) DOM.dashDormSelect.value = currentDashDorm;
             },
 
             fetchConfigs: async function (forceRefresh = false) {
+                if (forceRefresh) {
+                    DOM.refreshBtn.classList.add('is-loading');
+                    DOM.refreshBtn.disabled = true;
+                }
                 if(!forceRefresh) {
                     const cachedData = localStorage.getItem('mdcu_app_configs');
-                    if (cachedData) {
-                        try { this.renderConfigs(JSON.parse(cachedData)); } catch(e){}
-                    }
+                    if (cachedData) try { this.renderConfigs(JSON.parse(cachedData)); } catch(e){}
                 }
-
                 try {
                     const data = await fetchAPI("getConfigs");
                     if (data.status === "success") {
                         localStorage.setItem('mdcu_app_configs', JSON.stringify(data));
                         DOM.configLastUpdatedText.innerText = `อัปเดตล่าสุดเมื่อ ${new Date().toLocaleTimeString('th-TH')}`;
-                        
-                        if(data.users) {
-                            localStorage.setItem('mdcu_users_cache', JSON.stringify(data.users));
-                        }
-
+                        if(data.users) localStorage.setItem('mdcu_users_cache', JSON.stringify(data.users));
                         this.renderConfigs(data);
+                        this.hideLoader();
                     } else if (forceRefresh) {
                         this.showError("ไม่สามารถโหลดตั้งค่าได้", data.message);
+                        this.hideLoader();
                     }
                 } catch (err) {
+                    this.hideLoader();
                     if(!localStorage.getItem('mdcu_app_configs') || forceRefresh) {
                         DOM.placeSelect.innerHTML = '<option value="">เชื่อมต่อ API ไม่ได้</option>';
                         DOM.roundSelect.innerHTML = '<option value="">เชื่อมต่อ API ไม่ได้</option>';
                         this.showError("เกิดข้อผิดพลาด", err.message);
+                    }
+                } finally {
+                    if (forceRefresh) {
+                        setTimeout(() => {
+                            DOM.refreshBtn.classList.remove('is-loading');
+                            DOM.refreshBtn.disabled = false;
+                        }, 500);
                     }
                 }
             },
 
             verifyUser: async function (rawId) {
                 if (this.isProcessing) return;
-
                 const id = String(rawId).trim();
                 if (!/^\d{5}$/.test(id)) {
                     this.showError("ข้อมูลไม่ถูกต้อง", "คิวอาร์โค้ดหรือรหัสไม่ตรงตามรูปแบบ (ตัวเลข 5 หลัก)");
                     return;
                 }
-
                 this.isProcessing = true;
                 this.pendingId = id;
                 this.playBeep();
 
-                // อ่านข้อมูลแบบ 0 วินาที จาก Local Cache (ถ้ามี)
                 try {
-                    const cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache'));
+                    const cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
                     if (cachedUsers && cachedUsers[id]) {
                         this.openModal("confirm", "ตรวจสอบข้อมูล", "ยืนยันการทำรายการหรือไม่?", cachedUsers[id]);
-                        return;
+                        return; 
                     }
                 } catch(e) {}
 
-                // ถ้าไม่เจอใน Cache ให้โหลดผ่านเน็ตตามปกติ
                 this.openModal("loading", "กำลังค้นหาข้อมูล", `ID: ${id}`);
                 try {
                     const res = await fetchAPI("verifyUser", { id: id });
                     if (res.status === 'success') {
                         this.openModal("confirm", "ตรวจสอบข้อมูล", "ยืนยันการทำรายการหรือไม่?", res.data);
+                        let cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
+                        cachedUsers[id] = res.data;
+                        localStorage.setItem('mdcu_users_cache', JSON.stringify(cachedUsers));
                     } else {
                         this.openModal("error", "ไม่พบข้อมูล", res.message || "ไม่มีข้อมูลรหัสนี้ในระบบ");
                     }
@@ -752,11 +737,8 @@
 
             processManualEntry: function () {
                 const val = DOM.manualIdInput.value;
-                if (val.length === 5) {
-                    this.verifyUser(val);
-                } else {
-                    this.showError("รหัสไม่ครบถ้วน", "กรุณากรอกรหัสประจำตัวให้ครบ 5 หลัก");
-                }
+                if (val.length === 5) this.verifyUser(val);
+                else this.showError("รหัสไม่ครบถ้วน", "กรุณากรอกรหัสประจำตัวให้ครบ 5 หลัก");
             },
 
             confirmCheckIn: function () {
@@ -769,55 +751,47 @@
                     return;
                 }
 
-                // 1. ปิดหน้าต่างทันที เพื่อให้หน้าจอกลับมาพร้อมแสกนคนต่อไปได้เลย (Non-blocking)
                 this.closeModal();
-                DOM.manualIdInput.value = '';
+                if(this.currentMode === 'manual') DOM.manualIdInput.value = '';
 
-                // 2. เรียก API ไปหาเซิร์ฟเวอร์แบบ Asynchronous 
-                fetchAPI("processCheckIn", { id: id, round: round, place: place })
+                const nickname = this.lastUserData?.nickname ? String(this.lastUserData.nickname).trim() : '';
+                const label = nickname && nickname !== "-" ? `น้อง${nickname} (${id})` : id;
+
+                const loadingToast = this.showToast(`กำลังส่งข้อมูล: ${label}`, "bg-yellow-500", 0);
+
+                const payload = { id: id, round: round, place: place };
+
+                fetchAPI("processCheckIn", payload)
                     .then(res => {
-                        // 3. เมื่อได้ผลลัพธ์กลับมาจริงๆ ค่อยเด้ง Toast แจ้งเตือนการเขียนสำเร็จ
+                        this.hideToast(loadingToast); 
                         if (res.status === 'success' || (res.message && res.message.includes('แล้ว'))) {
-                            const nickname = this.lastUserData?.nickname ? String(this.lastUserData.nickname).trim() : '';
-                            const label = nickname ? `น้อง${nickname} (${id})` : id;
-                            this.showToast(`เช็คอินสำเร็จ: ${label}`, "bg-emerald-500");
-                            if (this.currentMode === 'dashboard') {
-                                this.loadDashboard();
-                            }
+                            this.showToast(`เช็คอินสำเร็จ: ${label}`, "bg-emerald-500", 3000); 
+                            if (this.currentMode === 'dashboard') this.loadDashboard();
                         } else {
-                            this.showToast(`ผิดพลาด (${id}): ${res.message}`, "bg-red-500");
+                            this.showToast(`ผิดพลาด (${id}): ${res.message}`, "bg-red-500", 4000);
                         }
                     })
                     .catch(err => {
-                        // 4. กรณีเน็ตหลุดระหว่างทาง ค่อยดึงข้อมูลลงคิวออฟไลน์เพื่อส่งทีหลัง
-                        this.showToast(`ออฟไลน์: บันทึก ${id} ลงเครื่อง`, "bg-yellow-500");
-                        
-                        const queueData = {
-                            reqId: Date.now() + "_" + Math.random().toString(36).substr(2, 9),
-                            id: id, round: round, place: place, timestamp: new Date().toISOString()
-                        };
+                        this.hideToast(loadingToast); 
+                        this.showToast(`ออฟไลน์: บันทึก ${id} ลงเครื่อง`, "bg-yellow-600", 3000);
+                        const queueData = { reqId: Date.now() + "_" + Math.random().toString(36).substr(2, 9), id: id, round: round, place: place, timestamp: new Date().toISOString() };
                         let queue = JSON.parse(localStorage.getItem('mdcu_checkin_queue') || '[]');
                         queue.push(queueData);
                         localStorage.setItem('mdcu_checkin_queue', JSON.stringify(queue));
-                        
                         this.processSyncQueue();
                     });
             },
 
             processSyncQueue: async function() {
                 if(this.isSyncing) return;
-                
                 let queue = JSON.parse(localStorage.getItem('mdcu_checkin_queue') || '[]');
                 if(queue.length === 0) {
-                    DOM.syncBadge.classList.add('hidden');
-                    return;
+                    DOM.syncBadge.classList.add('hidden'); return;
                 }
-
                 this.isSyncing = true;
                 DOM.syncBadge.classList.remove('hidden');
 
                 let remainingQueue = [...queue];
-
                 for(let i = 0; i < queue.length; i++) {
                     let task = queue[i];
                     try {
@@ -825,35 +799,53 @@
                         if (res.status === 'success' || (res.message && res.message.includes('แล้ว'))) {
                             remainingQueue = remainingQueue.filter(q => q.reqId !== task.reqId);
                             localStorage.setItem('mdcu_checkin_queue', JSON.stringify(remainingQueue));
-                            
-                            // แจ้งเตือนเมื่อส่งข้อมูลที่ค้างอยู่สำเร็จ
                             this.showToast(`ซิงค์ ${task.id} สำเร็จ!`, "bg-emerald-500");
                         }
-                    } catch (err) {
-                        break; // ขัดข้องทางเครือข่าย หยุดส่งก่อน
-                    }
+                    } catch (err) { break; }
                 }
-
                 this.isSyncing = false;
-                if(remainingQueue.length === 0) {
-                    DOM.syncBadge.classList.add('hidden');
-                }
+                if(remainingQueue.length === 0) DOM.syncBadge.classList.add('hidden');
             },
 
-            showToast: function(message, bgClass = "bg-emerald-500") {
-                DOM.toastMsg.innerText = message || "สำเร็จ!";
+            showToast: function(message, bgClass = "bg-emerald-500", duration = 3000) {
+                const toast = document.createElement('div');
+                toast.className = `flex items-center gap-3 rounded-2xl px-5 py-3.5 text-white shadow-2xl transition-all duration-300 transform translate-x-[150%] opacity-0 ${bgClass}`;
                 
-                // รีเซ็ต Class ทั้งหมดและใส่สีที่ต้องการ
-                DOM.toastNoti.className = `fixed top-5 right-5 z-[100] flex items-center gap-3 rounded-2xl px-5 py-3.5 text-white shadow-2xl transition-all duration-300 translate-x-[150%] opacity-0 pointer-events-none ${bgClass}`;
+                let iconSvg = '';
+                if(bgClass.includes('yellow')) {
+                    iconSvg = `<svg class="animate-spin-ccw h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                } else if(bgClass.includes('red')) {
+                    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+                } else {
+                    iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>`;
+                }
+
+                toast.innerHTML = `
+                    <div class="bg-white/20 rounded-full p-1 shrink-0">${iconSvg}</div>
+                    <span class="font-bold text-sm tracking-wide break-words">${message}</span>
+                `;
                 
-                // บังคับให้เบราว์เซอร์รับรู้การเปลี่ยน Class (Reflow) ก่อนลบคำสั่งซ่อน
-                void DOM.toastNoti.offsetWidth;
-                DOM.toastNoti.classList.remove('translate-x-[150%]', 'opacity-0');
-                
-                if (this.toastTimeout) clearTimeout(this.toastTimeout);
-                this.toastTimeout = setTimeout(() => {
-                    DOM.toastNoti.classList.add('translate-x-[150%]', 'opacity-0');
-                }, 2500); // ให้อยู่นานขึ้นนิดนึง (2.5 วิ) เพื่อให้อ่านรหัสทัน
+                DOM.toastContainer.appendChild(toast);
+
+                void toast.offsetWidth;
+                toast.classList.remove('translate-x-[150%]', 'opacity-0');
+
+                if (duration > 0) {
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.classList.add('translate-x-[150%]', 'opacity-0');
+                            setTimeout(() => toast.remove(), 300);
+                        }
+                    }, duration);
+                }
+
+                return toast;
+            },
+
+            hideToast: function(toast) {
+                if (!toast || !toast.parentNode) return;
+                toast.classList.add('translate-x-[150%]', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
             },
 
             toggleDashTab: function (tab) {
@@ -874,16 +866,21 @@
             },
 
             loadDashboard: async function () {
+                const keyword = DOM.dashSearchInput.value.trim().toLowerCase();
                 const baan = DOM.dashBaanSelect.value;
-                const round = DOM.dashRoundSelect.value;
-                if (!baan || !round) return alert("กรุณาเลือกรอบเวลาและเลือกบ้าน ให้ครบถ้วนก่อนกดค้นหา");
+                const dorm = DOM.dashDormSelect.value;
+                const round = DOM.roundSelect.value;
+
+                if (!round) return alert("กรุณาเลือกรอบเวลาที่ตั้งค่าด้านบนสุดก่อนกดค้นหา");
+                
 
                 DOM.statTotal.innerText = "..."; DOM.statIn.innerText = "..."; DOM.statMiss.innerText = "...";
                 DOM.listMissing.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กำลังโหลดข้อมูล...</div>`;
                 DOM.listPresent.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กำลังโหลดข้อมูล...</div>`;
 
                 try {
-                    const res = await fetchAPI("getDashboardData", { baan: baan, round: round });
+                    const res = await fetchAPI("getDashboardData", { keyword: keyword, baan: baan, dorm: dorm, round: round });
+                    
                     if (res.status === "success") {
                         DOM.dashLastUpdatedText.innerText = `ดึงข้อมูลล่าสุดเมื่อ ${new Date().toLocaleTimeString('th-TH')}`;
                         DOM.statTotal.innerText = res.summary.total;
@@ -891,7 +888,7 @@
                         DOM.statMiss.innerText = res.summary.missing;
 
                         DOM.listMissing.innerHTML = res.missingList.length === 0
-                            ? `<div class="text-center text-sm text-green-600 py-8 font-bold">มาครบทุกคนแล้ว</div>`
+                            ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
                             : res.missingList.map(u => `
                                 <button type="button" class="w-full text-left bg-white p-3 rounded-xl border border-red-100 flex justify-between items-center shadow-sm hover:bg-red-50 active:scale-[0.99] transition-all" data-user-id="${u.id}">
                                     <div><div class="text-xs font-mono text-gray-500">${u.id}</div><div class="text-sm font-bold text-gray-900">${u.name}</div></div>
@@ -899,7 +896,6 @@
                                 </button>
                             `).join('');
 
-                        // กดชื่อจากรายชื่อยังไม่มาเพื่อเปิด modal ยืนยันแบบเดียวกับการสแกน
                         DOM.listMissing.querySelectorAll('[data-user-id]').forEach((item) => {
                             item.addEventListener('click', () => {
                                 const userId = item.getAttribute('data-user-id');
@@ -908,9 +904,8 @@
                         });
 
                         DOM.listPresent.innerHTML = res.checkedInList.length === 0
-                            ? `<div class="text-center text-sm text-gray-400 py-8">ยังไม่มีผู้เช็คอิน</div>`
+                            ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
                             : res.checkedInList.map(u => {
-                                // แปลง Object ให้กลายเป็น String เผื่อกรณีที่ข้อมูลเวลาเป็น Object
                                 let timeDisplay = u.time;
                                 if (typeof u.time === 'object' && u.time !== null) {
                                     timeDisplay = JSON.stringify(u.time);
@@ -960,9 +955,15 @@
                     this.lastUserData = data || null;
                     DOM.modalUserData.classList.remove('hidden');
                     DOM.modalUserId.innerText = this.pendingId;
-                    DOM.modalUserName.innerText = `${data.firstName || ''} ${data.lastName || ''} ${data.nickname ? '(' + data.nickname + ')' : ''}`.trim();
+                    DOM.modalUserName.innerText = `${data.firstName || ''} ${data.lastName || ''} ${data.nickname && data.nickname !== "-" ? '(' + data.nickname + ')' : ''}`.trim();
                     DOM.modalUserBaan.innerText = data.baan || '-';
                     
+                    if (data.phone && data.phone !== "-" && data.phone !== "") {
+                        DOM.modalUserPhone.innerHTML = `<a href="tel:${data.phone}" class="underline hover:text-blue-800 flex items-center justify-end gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>${data.phone}</a>`;
+                    } else {
+                        DOM.modalUserPhone.innerHTML = '<span class="text-gray-400">-</span>';
+                    }
+
                     DOM.modalExtraInfo.classList.remove('hidden');
                     DOM.modalExtraInfo.classList.add('flex');
                     DOM.modalUserPlace.innerText = DOM.placeSelect.options[DOM.placeSelect.selectedIndex]?.text || '-';
@@ -985,7 +986,6 @@
                 this.isProcessing = false;
 
                 if (this.currentMode === 'scan') {
-                    // กลับมาแสกนต่อรวดเร็ว
                     setTimeout(() => SCANNER.resume(), 300);
                 } else if (this.currentMode === 'manual') {
                     DOM.manualIdInput.focus();
@@ -1032,4 +1032,4 @@
     </script>
 </body>
 
-</html>
+</html> 
