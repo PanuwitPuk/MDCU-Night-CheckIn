@@ -8,8 +8,8 @@
     <title>MDCU Night Check-in</title>
 
     <meta name="google-site-verification" content="LVo329QlgQQisNaJ7dDJGmEch0tas8Ljt8tmablNOfM" />
-    <meta name="description" content="ระบบเช็คอินกิจกรรม MDCU Night ซึ่งรองรับการสแกน QR Code และกรอกรหัสสำหรับเช็คชื่อน้อง">
-    <meta name="keywords" content="MDCU, Check-in, MDCU Night, ระบบเช็คอิน, เช็คอินกิจกรรม, สแกนคิวอาร์โค้ด, จุฬาลงกรณ์">
+    <meta name="description" content="ระบบเช็คชื่อกิจกรรม MDCU Night ซึ่งรองรับการสแกน QR Code และกรอกรหัสสำหรับเช็คชื่อน้อง">
+    <meta name="keywords" content="MDCU, Check-in, MDCU Night, ระบบเช็คชื่อ, เช็คชื่อกิจกรรม, สแกนคิวอาร์โค้ด, จุฬาลงกรณ์">
     <meta name="author" content="MDCU">
     <meta name="robots" content="index, follow">
 
@@ -164,7 +164,7 @@
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83 2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
-                <p class="text-xs font-bold text-gray-700 uppercase tracking-wider">การตั้งค่าการเช็คอิน</p>
+                <p class="text-xs font-bold text-gray-700 uppercase tracking-wider">การตั้งค่าการเช็คชื่อ</p>
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col">
@@ -277,7 +277,7 @@
                         <div id="statTotal" class="text-2xl font-black text-gray-900">-</div>
                     </div>
                     <div class="bg-green-50 rounded-2xl p-3 text-center border border-green-100 shadow-sm">
-                        <div class="text-[10px] font-bold text-green-600 mb-1 uppercase tracking-wider">เช็คอินแล้ว</div>
+                        <div class="text-[10px] font-bold text-green-600 mb-1 uppercase tracking-wider">เช็คชื่อแล้ว</div>
                         <div id="statIn" class="text-2xl font-black text-green-700">-</div>
                     </div>
                     <div class="bg-red-50 rounded-2xl p-3 text-center border border-red-100 shadow-sm">
@@ -289,7 +289,7 @@
                 <div class="flex-grow overflow-hidden flex flex-col bg-gray-50 rounded-2xl border border-gray-100 p-2">
                     <div class="flex gap-1 mb-3 bg-gray-200/50 p-1 rounded-xl">
                         <button onclick="APP.toggleDashTab('missing')" id="tabMissing" class="flex-1 text-xs font-bold py-2 rounded-lg bg-white text-red-600 shadow-sm transition-all">ยังไม่มา</button>
-                        <button onclick="APP.toggleDashTab('present')" id="tabPresent" class="flex-1 text-xs font-bold py-2 rounded-lg text-gray-500 hover:text-gray-700 transition-all">เช็คอินแล้ว</button>
+                        <button onclick="APP.toggleDashTab('present')" id="tabPresent" class="flex-1 text-xs font-bold py-2 rounded-lg text-gray-500 hover:text-gray-700 transition-all">เช็คชื่อแล้ว</button>
                     </div>
                     <div id="listMissing" class="flex-grow overflow-y-auto space-y-2 pb-2 px-1">
                         <div class="text-center text-sm text-gray-400 py-8">กรุณากดค้นหารายการที่ต้องการ</div>
@@ -381,7 +381,7 @@
     </div>
 
     <script>
-        const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaTGR94AgvVyoVLTQAC2fB5xBKaSsAkNYFEUjz4IUbTn2yBzrMTQn0HZQBTqb98BRz/exec";
+        const GOOGLE_APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw_MHGn0FOYB34gPNYeALOqeFGOUDkZaW0AczP2ur0DO00S8twxDD9kTRMbkHiJK8vy/exec";
 
         const DOM = {
             roundSelect: document.getElementById('roundSelect'),
@@ -765,7 +765,7 @@
                     .then(res => {
                         this.hideToast(loadingToast); 
                         if (res.status === 'success' || (res.message && res.message.includes('แล้ว'))) {
-                            this.showToast(`เช็คอินสำเร็จ: ${label}`, "bg-emerald-500", 3000); 
+                            this.showToast(`เช็คชื่อสำเร็จ: ${label}`, "bg-emerald-500", 3000); 
                             if (this.currentMode === 'dashboard') this.loadDashboard();
                         } else {
                             this.showToast(`ผิดพลาด (${id}): ${res.message}`, "bg-red-500", 4000);
@@ -873,10 +873,23 @@
 
                 if (!round) return alert("กรุณาเลือกรอบเวลาที่ตั้งค่าด้านบนสุดก่อนกดค้นหา");
                 
-
-                DOM.statTotal.innerText = "..."; DOM.statIn.innerText = "..."; DOM.statMiss.innerText = "...";
-                DOM.listMissing.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กำลังโหลดข้อมูล...</div>`;
-                DOM.listPresent.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กำลังโหลดข้อมูล...</div>`;
+                const statSkeleton = `<div class="h-8 w-12 bg-gray-200 rounded-md animate-pulse mx-auto"></div>`;
+                DOM.statTotal.innerHTML = statSkeleton; DOM.statIn.innerHTML = statSkeleton; DOM.statMiss.innerHTML = statSkeleton;
+                const skeletonHTML = Array(5).fill(`
+                    <div class="w-full bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm animate-pulse gap-3">
+                        <div class="flex flex-col gap-2 flex-grow">
+                            <div class="h-3 bg-gray-200 rounded-md w-1/3"></div>
+                            <div class="h-4 bg-gray-200 rounded-md w-2/3"></div>
+                        </div>
+                        <div class="flex flex-col gap-2 w-16 items-end">
+                            <div class="h-3 bg-gray-200 rounded-md w-full"></div>
+                            <div class="h-2 bg-gray-200 rounded-md w-3/4"></div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                DOM.listMissing.innerHTML = skeletonHTML;
+                DOM.listPresent.innerHTML = skeletonHTML;
 
                 try {
                     const res = await fetchAPI("getDashboardData", { keyword: keyword, baan: baan, dorm: dorm, round: round });
@@ -922,9 +935,15 @@
                             }).join('');
                     } else {
                         alert(res.message);
+                        DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
+                        DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
+                        DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
                     }
                 } catch (e) {
                     alert("เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อดึงข้อมูลสรุปยอด");
+                    DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
+                    DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
+                    DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
                 }
             },
 
