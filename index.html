@@ -335,6 +335,7 @@
                         </button>
                     </div>
                 </div>
+                <p class="pt-8 text-center text-[12px] font-bold text-gray-500">Developed by &PE (MDCU80) &amp; Pawinner (MDCU81)</p>
             </div>
         </footer>
     </div>
@@ -657,7 +658,7 @@
         };
 
         const APP = {
-            currentMode: "scan", isProcessing: false, pendingId: null, lastUserData: null, isSyncing: false,
+            currentMode: "scan", activeEventKey: "freshyCamp", isProcessing: false, pendingId: null, lastUserData: null, isSyncing: false,
             beepSound: new Audio("assets/sounds/beep.wav"),
 
             init: function () {
@@ -704,6 +705,7 @@
                 document.title = SEO_PAGE_TITLE;
 
                 const activeEventKey = getActiveEventKey(eventDate);
+                this.activeEventKey = activeEventKey;
                 const profile = EVENT_PROFILES[activeEventKey] || EVENT_PROFILES.freshyCamp;
 
                 DOM.eventHeaderTitle.innerText = profile.headerTitle;
@@ -843,7 +845,7 @@
                     return;
                 }
 
-                if (String(roundLabel).includes("ก่อนนอน") || String(round).includes("ก่อนนอน")) {
+                if (this.activeEventKey === "freshyCamp" && (String(roundLabel).includes("ก่อนนอน") || String(round).includes("ก่อนนอน"))) {
                     const studentDorm = String(this.lastUserData?.dorm || "").trim();
                     const checkInDorm = String(placeLabel || place || "").trim();
 
