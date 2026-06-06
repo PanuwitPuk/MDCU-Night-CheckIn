@@ -913,16 +913,6 @@
                         return;
                     }
 
-                    if (this.activeEventKey === "freshyCamp" && (String(roundLabel).includes("ก่อนนอน") || String(round).includes("ก่อนนอน"))) {
-                        const studentDorm = String(userData?.dorm || "").trim();
-                        const checkInDorm = String(placeLabel || place || "").trim();
-
-                        if (!studentDorm || studentDorm === "-" || studentDorm !== checkInDorm) {
-                            this.showError("น้องอยู่ผิดห้องนอน", "กรุณากลับไปห้องนอนตัวเองเพื่อเช็คชื่ออีกครั้ง");
-                            return;
-                        }
-                    }
-
                     if (window.HARDWARE_SCANNER && window.HARDWARE_SCANNER.autoConfirm) {
                         this.confirmCheckIn();
                     } else {
