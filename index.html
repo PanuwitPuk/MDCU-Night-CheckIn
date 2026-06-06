@@ -657,6 +657,101 @@
             }
         };
 
+        const HARDWARE_SCANNER = {
+            buffer: "",
+            lastKeyTime: 0,
+            typingThreshold: 50, // ms between keystrokes
+            autoConfirm: false, // Default is OFF
+
+            init: function() {
+                window.addEventListener('keydown', (e) => {
+                    // 1. Shift+D shortcut (case-insensitive for 'd')
+                    if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+                        const activeEl = document.activeElement;
+                        const isInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT');
+                        if (!isInput) {
+                            e.preventDefault();
+                            this.toggleAutoConfirm();
+                        }
+                        return;
+                    }
+
+                    // 2. Result modal shortcuts (Enter to confirm / Escape to cancel)
+                    const isModalOpen = !DOM.resultModal.classList.contains('opacity-0') && !DOM.resultModal.classList.contains('pointer-events-none');
+                    if (isModalOpen) {
+                        if (e.key === 'Enter') {
+                            if (!DOM.modalConfirmActions.classList.contains('hidden')) {
+                                e.preventDefault();
+                                APP.confirmCheckIn();
+                            } else if (!DOM.modalCloseActions.classList.contains('hidden')) {
+                                e.preventDefault();
+                                APP.closeModal();
+                            }
+                            return;
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            APP.closeModal();
+                            return;
+                        }
+                    }
+
+                    // 3. Manual entry input shortcut (pressing Enter inside manualIdInput submits)
+                    if (e.key === 'Enter' && document.activeElement === DOM.manualIdInput) {
+                        e.preventDefault();
+                        APP.processManualEntry();
+                        return;
+                    }
+
+                    // 4. Barcode scanner keydown buffering
+                    if (APP.isProcessing) return; // Ignore input if currently processing or showing modal
+
+                    const now = Date.now();
+                    const timeDiff = now - this.lastKeyTime;
+
+                    if (e.key >= '0' && e.key <= '9') {
+                        if (timeDiff > this.typingThreshold) {
+                            this.buffer = ""; // Reset buffer if delay was too long (human typing)
+                        }
+                        this.buffer += e.key;
+                        this.lastKeyTime = now;
+                    } else if (e.key === 'Enter') {
+                        if (this.buffer.length === 5 && /^\d{5}$/.test(this.buffer)) {
+                            e.preventDefault();
+                            const scannedId = this.buffer;
+                            this.buffer = ""; // Clear buffer
+                            
+                            const activeEl = document.activeElement;
+                            if (activeEl && activeEl.tagName === 'INPUT') {
+                                if (activeEl.id === 'manualIdInput') {
+                                    activeEl.value = "";
+                                }
+                                activeEl.blur();
+                            }
+
+                            APP.showToast(`สแกนรหัสสำเร็จ: ${scannedId}`, "bg-gray-900", 1500);
+                            APP.verifyUser(scannedId);
+                        }
+                        this.buffer = ""; // Clear buffer on Enter
+                    } else {
+                        // Any other key resets the buffer (except Shift to allow scanner modifiers)
+                        if (e.key !== 'Shift') {
+                            this.buffer = "";
+                        }
+                    }
+                });
+            },
+
+            toggleAutoConfirm: function() {
+                this.autoConfirm = !this.autoConfirm;
+                if (this.autoConfirm) {
+                    APP.showToast("เปิดเช็คชื่ออัตโนมัติ (Auto-Confirm: ON)", "bg-indigo-600", 3000);
+                } else {
+                    APP.showToast("ปิดเช็คชื่ออัตโนมัติ (Auto-Confirm: OFF)", "bg-gray-700", 3000);
+                }
+            }
+        };
+
         const APP = {
             currentMode: "scan", activeEventKey: "freshyCamp", isProcessing: false, pendingId: null, lastUserData: null, isSyncing: false,
             beepSound: new Audio("assets/sounds/beep.wav"),
@@ -671,6 +766,9 @@
                         this.beepSound.currentTime = 0;
                     }).catch(()=>{});
                 }, { once: true });
+                
+                // Initialize physical barcode scanner event listener
+                HARDWARE_SCANNER.init();
                 
                 setInterval(() => this.processSyncQueue(), 10000);
             },
@@ -803,10 +901,39 @@
                 this.pendingId = id;
                 this.playBeep();
 
+                const validateAndCheckIn = (userData) => {
+                    this.lastUserData = userData;
+                    const round = DOM.roundSelect.value;
+                    const place = DOM.placeSelect.value;
+                    const roundLabel = DOM.roundSelect.options[DOM.roundSelect.selectedIndex]?.text || round;
+                    const placeLabel = DOM.placeSelect.options[DOM.placeSelect.selectedIndex]?.text || place;
+
+                    if (!round || !place || round === "" || place === "" || round === "กรุณาเลือก" || place === "กรุณาเลือก") {
+                        this.showError("ข้อมูลไม่ครบ", "กรุณาเลือกรอบเวลาและจุดตรวจสอบด้านบนให้เรียบร้อย");
+                        return;
+                    }
+
+                    if (this.activeEventKey === "freshyCamp" && (String(roundLabel).includes("ก่อนนอน") || String(round).includes("ก่อนนอน"))) {
+                        const studentDorm = String(userData?.dorm || "").trim();
+                        const checkInDorm = String(placeLabel || place || "").trim();
+
+                        if (!studentDorm || studentDorm === "-" || studentDorm !== checkInDorm) {
+                            this.showError("น้องอยู่ผิดห้องนอน", "กรุณากลับไปห้องนอนตัวเองเพื่อเช็คชื่ออีกครั้ง");
+                            return;
+                        }
+                    }
+
+                    if (window.HARDWARE_SCANNER && window.HARDWARE_SCANNER.autoConfirm) {
+                        this.confirmCheckIn();
+                    } else {
+                        this.openModal("confirm", "ตรวจสอบข้อมูล", "ยืนยันการทำรายการหรือไม่?", userData);
+                    }
+                };
+
                 try {
                     const cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
                     if (cachedUsers && cachedUsers[id]) {
-                        this.openModal("confirm", "ตรวจสอบข้อมูล", "ยืนยันการทำรายการหรือไม่?", cachedUsers[id]);
+                        validateAndCheckIn(cachedUsers[id]);
                         return; 
                     }
                 } catch(e) {}
@@ -815,10 +942,10 @@
                 try {
                     const res = await fetchAPI("verifyUser", { id: id });
                     if (res.status === 'success') {
-                        this.openModal("confirm", "ตรวจสอบข้อมูล", "ยืนยันการทำรายการหรือไม่?", res.data);
                         let cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
                         cachedUsers[id] = res.data;
                         localStorage.setItem('mdcu_users_cache', JSON.stringify(cachedUsers));
+                        validateAndCheckIn(res.data);
                     } else {
                         this.openModal("error", "ไม่พบข้อมูล", res.message || "ไม่มีข้อมูลรหัสนี้ในระบบ");
                     }
@@ -1149,6 +1276,7 @@
 
         window.APP = APP;
         window.SCANNER = SCANNER;
+        window.HARDWARE_SCANNER = HARDWARE_SCANNER;
 
         document.addEventListener("DOMContentLoaded", () => {
             APP.init();
