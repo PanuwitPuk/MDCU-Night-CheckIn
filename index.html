@@ -966,7 +966,7 @@
                     const studentDorm = String(this.lastUserData?.dorm || "").trim();
                     const checkInDorm = String(placeLabel || place || "").trim();
 
-                    if (!studentDorm || studentDorm === "-" || studentDorm !== checkInDorm) {
+                    if (!checkInDorm.includes("กลับบ้าน") && (!studentDorm || studentDorm === "-" || studentDorm !== checkInDorm)) {
                         this.showError("น้องอยู่ผิดห้องนอน", "กรุณากลับไปห้องนอนตัวเองเพื่อเช็คชื่ออีกครั้ง");
                         return;
                     }
