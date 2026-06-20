@@ -276,7 +276,7 @@
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
                         </div>
                     </div>
-                    <button onclick="APP.loadDashboard()" class="w-full bg-gray-900 text-white px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-md">ค้นหาข้อมูล</button>
+                    <button onclick="APP.loadDashboard(true)" class="w-full bg-gray-900 text-white px-5 py-3 rounded-xl text-sm font-bold active:scale-95 transition-all shadow-md">ค้นหาข้อมูล</button>
                     <div id="dashLastUpdated" class="text-xs font-medium text-gray-400 px-1 flex items-center justify-center gap-1.5">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"></circle>
@@ -754,6 +754,7 @@
 
         const APP = {
             currentMode: "scan", activeEventKey: "freshyCamp", isProcessing: false, pendingId: null, lastUserData: null, isSyncing: false,
+            dashboardMasterData: null, // Client-side dashboard cache: { round, checkedInList, missingList }
             beepSound: new Audio("assets/sounds/beep.wav"),
 
             init: function () {
@@ -769,6 +770,12 @@
                 
                 // Initialize physical barcode scanner event listener
                 HARDWARE_SCANNER.init();
+                
+                // Bind real-time client-side search and filtering listeners
+                DOM.dashSearchInput.addEventListener('input', () => this.loadDashboard(false));
+                DOM.dashBaanSelect.addEventListener('change', () => this.loadDashboard(false));
+                DOM.dashDormSelect.addEventListener('change', () => this.loadDashboard(false));
+                DOM.roundSelect.addEventListener('change', () => this.loadDashboard(true)); // Changing round requires fresh fetch
                 
                 setInterval(() => this.processSyncQueue(), 10000);
             },
@@ -797,6 +804,7 @@
 
                 if (mode === 'scan') SCANNER.resume(); else SCANNER.stop();
                 if (mode === 'manual') DOM.manualIdInput.focus();
+                if (mode === 'dashboard') this.loadDashboard(false); // Auto-load dashboard on tab switch
             },
 
             renderEventBranding: function(eventDate) {
@@ -869,6 +877,7 @@
                         if(data.users) localStorage.setItem('mdcu_users_cache', JSON.stringify(data.users));
                         this.renderConfigs(data);
                         this.hideLoader();
+                        if (this.currentMode === 'dashboard') this.loadDashboard(true); // Force reload dashboard from server since configs changed
                     } else {
                         this.showError("ไม่สามารถโหลดตั้งค่าได้", data.message);
                         this.hideLoader();
@@ -982,12 +991,50 @@
 
                 const payload = { id: id, round: round, place: place };
 
+                // Helper to update the client-side master dashboard list cache on successful check-in
+                const updateLocalDashboardCache = () => {
+                    if (this.dashboardMasterData && this.dashboardMasterData.round === round) {
+                        const missingIdx = this.dashboardMasterData.missingList.findIndex(u => u.id === id);
+                        if (missingIdx !== -1) {
+                            const user = this.dashboardMasterData.missingList.splice(missingIdx, 1)[0];
+                            const now = new Date();
+                            const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hour12: false });
+                            this.dashboardMasterData.checkedInList.push({
+                                id: id,
+                                name: user.name,
+                                time: timeStr,
+                                place: place
+                            });
+                        } else {
+                            const alreadyChecked = this.dashboardMasterData.checkedInList.some(u => u.id === id);
+                            if (!alreadyChecked) {
+                                let name = `ID: ${id}`;
+                                try {
+                                    const cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
+                                    if (cachedUsers && cachedUsers[id]) {
+                                        const u = cachedUsers[id];
+                                        name = `${u.firstName || ''} ${u.lastName || ''} ${u.nickname && u.nickname !== "-" ? '(' + u.nickname + ')' : ''}`.trim();
+                                    }
+                                } catch (e) {}
+                                const now = new Date();
+                                const timeStr = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hour12: false });
+                                this.dashboardMasterData.checkedInList.push({
+                                    id: id,
+                                    name: name,
+                                    time: timeStr,
+                                    place: place
+                                });
+                            }
+                        }
+                    }
+                };
+
                 fetchAPI("processCheckIn", payload)
                     .then(res => {
                         this.hideToast(loadingToast); 
                         if (res.status === 'success' || (res.message && res.message.includes('แล้ว'))) {
                             this.showToast(`เช็คชื่อสำเร็จ: ${label}`, "bg-emerald-500", 3000); 
-                            if (this.currentMode === 'dashboard') this.loadDashboard();
+                            if (this.currentMode === 'dashboard') this.loadDashboard(true);
                         } else {
                             this.showToast(`ผิดพลาด (${id}): ${res.message}`, "bg-red-500", 4000);
                         }
@@ -999,6 +1046,10 @@
                         let queue = JSON.parse(localStorage.getItem('mdcu_checkin_queue') || '[]');
                         queue.push(queueData);
                         localStorage.setItem('mdcu_checkin_queue', JSON.stringify(queue));
+                        
+                        updateLocalDashboardCache();
+                        if (this.currentMode === 'dashboard') this.loadDashboard(false);
+                        
                         this.processSyncQueue();
                     });
             },
@@ -1021,6 +1072,7 @@
                             remainingQueue = remainingQueue.filter(q => q.reqId !== task.reqId);
                             localStorage.setItem('mdcu_checkin_queue', JSON.stringify(remainingQueue));
                             this.showToast(`ซิงค์ ${task.id} สำเร็จ!`, "bg-emerald-500");
+                            if (this.currentMode === 'dashboard') this.loadDashboard(true); // Force reload from server
                         }
                     } catch (err) { break; }
                 }
@@ -1086,86 +1138,142 @@
                 }
             },
 
-            loadDashboard: async function () {
+            loadDashboard: async function (forceServerFetch = false) {
                 const keyword = DOM.dashSearchInput.value.trim().toLowerCase();
                 const baan = DOM.dashBaanSelect.value;
                 const dorm = DOM.dashDormSelect.value;
                 const round = DOM.roundSelect.value;
 
-                if (!round) return alert("กรุณาเลือกรอบเวลาที่ตั้งค่าด้านบนสุดก่อนกดค้นหา");
-                
-                const statSkeleton = `<div class="h-8 w-12 bg-gray-200 rounded-md animate-pulse mx-auto"></div>`;
-                DOM.statTotal.innerHTML = statSkeleton; DOM.statIn.innerHTML = statSkeleton; DOM.statMiss.innerHTML = statSkeleton;
-                const skeletonHTML = Array(5).fill(`
-                    <div class="w-full bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm animate-pulse gap-3">
-                        <div class="flex flex-col gap-2 flex-grow">
-                            <div class="h-3 bg-gray-200 rounded-md w-1/3"></div>
-                            <div class="h-4 bg-gray-200 rounded-md w-2/3"></div>
-                        </div>
-                        <div class="flex flex-col gap-2 w-16 items-end">
-                            <div class="h-3 bg-gray-200 rounded-md w-full"></div>
-                            <div class="h-2 bg-gray-200 rounded-md w-3/4"></div>
-                        </div>
-                    </div>
-                `).join('');
-                
-                DOM.listMissing.innerHTML = skeletonHTML;
-                DOM.listPresent.innerHTML = skeletonHTML;
-
-                try {
-                    const res = await fetchAPI("getDashboardData", { keyword: keyword, baan: baan, dorm: dorm, round: round });
-                    
-                    if (res.status === "success") {
-                        DOM.dashLastUpdatedText.innerText = `ดึงข้อมูลล่าสุดเมื่อ ${new Date().toLocaleTimeString('th-TH')}`;
-                        DOM.statTotal.innerText = res.summary.total;
-                        DOM.statIn.innerText = res.summary.checkedIn;
-                        DOM.statMiss.innerText = res.summary.missing;
-
-                        DOM.listMissing.innerHTML = res.missingList.length === 0
-                            ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
-                            : res.missingList.map(u => `
-                                <button type="button" class="w-full text-left bg-white p-3 rounded-xl border border-red-100 flex justify-between items-center shadow-sm hover:bg-red-50 active:scale-[0.99] transition-all" data-user-id="${u.id}">
-                                    <div><div class="text-xs font-mono text-gray-500">${u.id}</div><div class="text-sm font-bold text-gray-900">${u.name}</div></div>
-                                    <div class="w-2.5 h-2.5 bg-red-500 rounded-full"></div>
-                                </button>
-                            `).join('');
-
-                        DOM.listMissing.querySelectorAll('[data-user-id]').forEach((item) => {
-                            item.addEventListener('click', () => {
-                                const userId = item.getAttribute('data-user-id');
-                                if (userId) this.verifyUser(userId);
-                            });
-                        });
-
-                        DOM.listPresent.innerHTML = res.checkedInList.length === 0
-                            ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
-                            : res.checkedInList.map(u => {
-                                let timeDisplay = u.time;
-                                if (typeof u.time === 'object' && u.time !== null) {
-                                    timeDisplay = JSON.stringify(u.time);
-                                } else if (u.time === undefined || u.time === null) {
-                                    timeDisplay = '-';
-                                }
-
-                                return `
-                                <div class="bg-white p-3 rounded-xl border border-green-100 flex justify-between items-center shadow-sm">
-                                    <div><div class="text-xs font-mono text-gray-500">${u.id}</div><div class="text-sm font-bold text-gray-900">${u.name}</div></div>
-                                    <div class="text-right"><div class="text-xs font-bold text-green-600">${timeDisplay} น.</div><div class="text-[10px] text-gray-500 truncate max-w-[80px]">${u.place}</div></div>
-                                </div>
-                                `
-                            }).join('');
-                    } else {
-                        alert(res.message);
-                        DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
-                        DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
-                        DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
-                    }
-                } catch (e) {
-                    alert("เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อดึงข้อมูลสรุปยอด");
+                if (!round) {
                     DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
-                    DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
-                    DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
+                    DOM.listMissing.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กรุณาเลือกรอบเวลาด้านบน</div>`;
+                    DOM.listPresent.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">กรุณาเลือกรอบเวลาด้านบน</div>`;
+                    return;
                 }
+
+                // Fetch if cache is empty, selected round changed, or server fetch is forced
+                if (!this.dashboardMasterData || this.dashboardMasterData.round !== round || forceServerFetch) {
+                    const statSkeleton = `<div class="h-8 w-12 bg-gray-200 rounded-md animate-pulse mx-auto"></div>`;
+                    DOM.statTotal.innerHTML = statSkeleton; DOM.statIn.innerHTML = statSkeleton; DOM.statMiss.innerHTML = statSkeleton;
+                    const skeletonHTML = Array(5).fill(`
+                        <div class="w-full bg-white p-3 rounded-xl border border-gray-100 flex justify-between items-center shadow-sm animate-pulse gap-3">
+                            <div class="flex flex-col gap-2 flex-grow">
+                                <div class="h-3 bg-gray-200 rounded-md w-1/3"></div>
+                                <div class="h-4 bg-gray-200 rounded-md w-2/3"></div>
+                            </div>
+                            <div class="flex flex-col gap-2 w-16 items-end">
+                                <div class="h-3 bg-gray-200 rounded-md w-full"></div>
+                                <div class="h-2 bg-gray-200 rounded-md w-3/4"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    DOM.listMissing.innerHTML = skeletonHTML;
+                    DOM.listPresent.innerHTML = skeletonHTML;
+
+                    try {
+                        // Fetch full unfiltered dashboard lists for this round
+                        const res = await fetchAPI("getDashboardData", { keyword: "", baan: "", dorm: "", round: round });
+                        
+                        if (res.status === "success") {
+                            this.dashboardMasterData = {
+                                round: round,
+                                checkedInList: res.checkedInList || [],
+                                missingList: res.missingList || []
+                            };
+                            DOM.dashLastUpdatedText.innerText = `ดึงข้อมูลล่าสุดเมื่อ ${new Date().toLocaleTimeString('th-TH')}`;
+                        } else {
+                            alert(res.message);
+                            DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
+                            DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
+                            DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8 whitespace-pre-wrap">เกิดข้อผิดพลาด:\n${res.message}</div>`;
+                            return;
+                        }
+                    } catch (e) {
+                        alert("เกิดข้อผิดพลาดในการเชื่อมต่อเพื่อดึงข้อมูลสรุปยอด");
+                        DOM.statTotal.innerText = "-"; DOM.statIn.innerText = "-"; DOM.statMiss.innerText = "-";
+                        DOM.listMissing.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
+                        DOM.listPresent.innerHTML = `<div class="text-center text-sm text-red-500 py-8">เกิดข้อผิดพลาดในการเชื่อมต่อ<br>กรุณาลองใหม่อีกครั้ง</div>`;
+                        return;
+                    }
+                }
+
+                // Client-side filtering on cached round data
+                let cachedUsers = {};
+                try {
+                    cachedUsers = JSON.parse(localStorage.getItem('mdcu_users_cache') || '{}');
+                } catch(e) {}
+
+                const filteredCheckedIn = [];
+                const filteredMissing = [];
+
+                this.dashboardMasterData.checkedInList.forEach(u => {
+                    const profile = cachedUsers[u.id] || {};
+                    const rowBaan = String(profile.baan || "").trim();
+                    const rowDorm = String(profile.dorm || "").trim();
+                    const fullNameLower = u.name.toLowerCase();
+                    
+                    let match = true;
+                    if (baan !== "" && rowBaan !== baan) match = false;
+                    if (dorm !== "" && rowDorm !== dorm) match = false;
+                    if (keyword !== "" && !fullNameLower.includes(keyword) && u.id !== keyword) match = false;
+                    
+                    if (match) filteredCheckedIn.push(u);
+                });
+
+                this.dashboardMasterData.missingList.forEach(u => {
+                    const profile = cachedUsers[u.id] || {};
+                    const rowBaan = String(profile.baan || "").trim();
+                    const rowDorm = String(profile.dorm || "").trim();
+                    const fullNameLower = u.name.toLowerCase();
+                    
+                    let match = true;
+                    if (baan !== "" && rowBaan !== baan) match = false;
+                    if (dorm !== "" && rowDorm !== dorm) match = false;
+                    if (keyword !== "" && !fullNameLower.includes(keyword) && u.id !== keyword) match = false;
+                    
+                    if (match) filteredMissing.push(u);
+                });
+
+                // Update counts
+                DOM.statTotal.innerText = filteredCheckedIn.length + filteredMissing.length;
+                DOM.statIn.innerText = filteredCheckedIn.length;
+                DOM.statMiss.innerText = filteredMissing.length;
+
+                // Render lists
+                DOM.listMissing.innerHTML = filteredMissing.length === 0
+                    ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
+                    : filteredMissing.map(u => `
+                        <button type="button" class="w-full text-left bg-white p-3 rounded-xl border border-red-100 flex justify-between items-center shadow-sm hover:bg-red-50 active:scale-[0.99] transition-all" data-user-id="${u.id}">
+                            <div><div class="text-xs font-mono text-gray-500">${u.id}</div><div class="text-sm font-bold text-gray-900">${u.name}</div></div>
+                            <div class="w-2.5 h-2.5 bg-red-500 rounded-full"></div>
+                        </button>
+                    `).join('');
+
+                DOM.listMissing.querySelectorAll('[data-user-id]').forEach((item) => {
+                    item.addEventListener('click', () => {
+                        const userId = item.getAttribute('data-user-id');
+                        if (userId) this.verifyUser(userId);
+                    });
+                });
+
+                DOM.listPresent.innerHTML = filteredCheckedIn.length === 0
+                    ? `<div class="text-center text-sm text-gray-400 py-8">ไม่พบรายการ</div>`
+                    : filteredCheckedIn.map(u => {
+                        let timeDisplay = u.time;
+                        if (typeof u.time === 'object' && u.time !== null) {
+                            timeDisplay = JSON.stringify(u.time);
+                        } else if (u.time === undefined || u.time === null) {
+                            timeDisplay = '-';
+                        }
+
+                        return `
+                        <div class="bg-white p-3 rounded-xl border border-green-100 flex justify-between items-center shadow-sm">
+                            <div><div class="text-xs font-mono text-gray-500">${u.id}</div><div class="text-sm font-bold text-gray-900">${u.name}</div></div>
+                            <div class="text-right"><div class="text-xs font-bold text-green-600">${timeDisplay} น.</div><div class="text-[10px] text-gray-500 truncate max-w-[80px]">${u.place || '-'}</div></div>
+                        </div>
+                        `
+                    }).join('');
             },
 
             showError: function (title, msg) {
